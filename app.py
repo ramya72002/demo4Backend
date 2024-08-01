@@ -25,7 +25,7 @@ client = MongoClient(mongo_uri)
 db = client.jobwebsite
 users_collection = db.jobslist
 
-GOOGLE_CLIENT_ID = "573222272132-pkta68gl7drvl3jqin8v6ro68ftgj3dv.apps.googleusercontent.com"
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 client_secrets_file = os.path.join(pathlib.Path(__file__).parent, "client_secret.json")
 
 flow = Flow.from_client_secrets_file(
