@@ -36,7 +36,7 @@ flow = Flow.from_client_secrets_file(
 
 @app.route("/")
 def index():
-    return "Hello World <a href='/login'><button>Login</button></a>"
+    return "Hello World <a href='/login'> <button>Login</button></a>"
 
 def time_now():
     return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
