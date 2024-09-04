@@ -20,6 +20,7 @@ mongo_uri = os.getenv('MONGO_URI')
 client = MongoClient(mongo_uri)
 app.db = client.jobwebsite
 app.db1 = client.company_db
+app.db2 = client.zoho_db
 
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 client_secrets_file = os.path.join(pathlib.Path(__file__).parent, "client_secret.json")
