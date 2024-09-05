@@ -72,3 +72,60 @@ def get_zoho_job():
     except Exception as e:
         # Return error response
         return jsonify({'error': str(e)}), 500
+
+
+@zoho_bp.route('/candidate/post', methods=['POST'])
+def post_candidate():
+    try:
+        # Get candidate data from request JSON
+        candidate_data = request.json
+        
+        # Define required fields
+        required_fields = ['Last Name']
+        
+        # Validate required fields
+        missing_fields = [field for field in required_fields if field not in candidate_data or not candidate_data[field]]
+        if missing_fields:
+            return jsonify({'error': f'Missing required fields: {", ".join(missing_fields)}'}), 400
+        
+        # Insert candidate data into MongoDB
+        result = app.db2.candidatelist.insert_one(candidate_data)
+        
+        # Return success response with inserted ID
+        return jsonify({'message': 'Candidate added successfully', 'candidate_id': str(result.inserted_id)}), 201
+    
+    except Exception as e:
+        # Return error response
+        return jsonify({'error': str(e)}), 500
+
+@zoho_bp.route('/jobs/getall', methods=['GET'])
+def get_all_jobs():
+    try:
+        # Fetch all records from the 'jobs' collection and exclude '_id'
+        jobs = app.db2.joblist.find({}, {'_id': False})
+        
+        # Convert the MongoDB cursor into a list
+        candidates_list = list(jobs)
+        
+        # Return the list of candidates as JSON
+        return jsonify(candidates_list), 200
+    
+    except Exception as e:
+        # Return error response in case of failure
+        return jsonify({'error': str(e)}), 500
+    
+@zoho_bp.route('/candidate/getall', methods=['GET'])
+def get_all_candidates():
+    try:
+        # Fetch all records from the 'candidates' collection and exclude '_id'
+        candidates = app.db2.candidatelist.find({}, {'_id': False})
+        
+        # Convert the MongoDB cursor into a list
+        candidates_list = list(candidates)
+        
+        # Return the list of candidates as JSON
+        return jsonify(candidates_list), 200
+    
+    except Exception as e:
+        # Return error response in case of failure
+        return jsonify({'error': str(e)}), 500
