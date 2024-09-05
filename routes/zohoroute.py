@@ -196,7 +196,7 @@ def update_candidate_stage():
         
         # Update the candidate's stage in MongoDB
         result = app.db2.candidatelist.update_many(
-            {'First_Name': first_name, 'Last_Name': last_name},  # Filter by first name and last name
+            {'First Name': first_name, 'Last Name': last_name},  # Filter by first name and last name
             {'$set': {
                 'Candidate_Stage': new_stage
             }}  # Update the Candidate_Stage
