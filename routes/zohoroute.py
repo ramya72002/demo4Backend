@@ -20,7 +20,7 @@ def add_zoho_job():
         job_data = request.json
         
         # Define required fields
-        required_fields = ['Posting Title', 'Target Date', 'Industry', 'Client Name']
+        required_fields = ['postingTitle', 'clientName', 'targetDate', 'industry']
         
         # Validate required fields
         missing_fields = [field for field in required_fields if field not in job_data]
@@ -28,13 +28,35 @@ def add_zoho_job():
             return jsonify({'error': f'Missing fields: {", ".join(missing_fields)}'}), 400
 
         # Convert Target Date to datetime
-        job_data['Target Date'] = datetime.strptime(job_data['Target Date'], '%m/%d/%Y')
-        
+        job_data['targetDate'] = datetime.strptime(job_data['targetDate'], '%Y-%m-%d')        
         # Insert job data into MongoDB
         result = app.db2.joblist.insert_one(job_data)
         
         # Return success response with inserted ID
         return jsonify({'message': 'Job added successfully', 'job_id': str(result.inserted_id)}), 201
+    
+    except Exception as e:
+        # Return error response
+        return jsonify({'error': str(e)}), 500
+    
+@zoho_bp.route('/zoho/postclient', methods=['POST'])
+def add_zoho_client():
+    try:
+        # Get job data from request JSON
+        job_data = request.json
+        
+        # Define required fields
+        required_fields = ['clientName']
+        
+        # Validate required fields
+        missing_fields = [field for field in required_fields if field not in job_data]
+        if missing_fields:
+            return jsonify({'error': f'Missing fields: {", ".join(missing_fields)}'}), 400
+ 
+        result = app.db2.clientlist.insert_one(job_data)
+        
+        # Return success response with inserted ID
+        return jsonify({'message': 'client added successfully', 'client_id': str(result.inserted_id)}), 201
     
     except Exception as e:
         # Return error response
