@@ -136,6 +136,7 @@ def post_candidate():
         if missing_fields:
             return jsonify({'error': f'Missing required fields: {", ".join(missing_fields)}'}), 400
         
+        candidate_data['Candidate_Stage'] = "new"
         # Insert candidate data into MongoDB
         result = app.db2.candidatelist.insert_one(candidate_data)
         
@@ -146,6 +147,35 @@ def post_candidate():
         # Return error response
         return jsonify({'error': str(e)}), 500
 
+@zoho_bp.route('/candidate/update_stage', methods=['POST'])
+def update_candidate_stage():
+    try:
+        # Get data from request JSON
+        update_data = request.json
+        
+        # Check if 'candidate_id' and 'Candidate_Stage' are provided
+        if 'candidate_id' not in update_data or 'Candidate_Stage' not in update_data:
+            return jsonify({'error': 'Missing required fields: candidate_id and Candidate_Stage'}), 400
+        
+        # Define the candidate ID and new stage
+        candidate_id = update_data['candidate_id']
+        new_stage = update_data['Candidate_Stage']
+        
+        # Update the candidate's stage in MongoDB
+        result = app.db2.candidatelist.update_one(
+            {'_id': pymongo.ObjectId(candidate_id)},  # Filter by candidate ID
+            {'$set': {'Candidate_Stage': new_stage}}  # Update the Candidate_Stage
+        )
+        
+        # Check if the update was successful
+        if result.matched_count == 0:
+            return jsonify({'error': 'Candidate not found'}), 404
+        
+        return jsonify({'message': 'Candidate stage updated successfully'}), 200
+    
+    except Exception as e:
+        # Return error response
+        return jsonify({'error': str(e)}), 500
 
 @zoho_bp.route('/zoho/postinterview', methods=['POST'])
 def add_interview():
