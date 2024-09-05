@@ -62,7 +62,33 @@ def add_zoho_client():
         # Return error response
         return jsonify({'error': str(e)}), 500
     
+@zoho_bp.route('/zoho/updatejobstatus', methods=['POST'])
+def update_job_status():
+    try:
+        # Get request data
+        client_name = request.json.get('clientName')
+        posting_title = request.json.get('postingTitle')
+        new_status = request.json.get('newStatus')
 
+        # Validate input
+        if not client_name or not posting_title or not new_status:
+            return jsonify({'error': 'clientName, postingTitle, and newStatus are required'}), 400
+
+        # Find the job and update the status
+        result = app.db2.joblist.update_one(
+            {'clientName': client_name, 'postingTitle': posting_title},
+            {'$set': {'Job Opening Status': new_status}}
+        )
+
+        # Check if any job was updated
+        if result.matched_count == 0:
+            return jsonify({'error': 'Job not found'}), 404
+
+        return jsonify({'message': 'Job status updated successfully'}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
 @zoho_bp.route('/zoho/getjob', methods=['GET'])
 def get_zoho_job():
     try:
@@ -119,6 +145,54 @@ def post_candidate():
     except Exception as e:
         # Return error response
         return jsonify({'error': str(e)}), 500
+
+
+@zoho_bp.route('/zoho/postinterview', methods=['POST'])
+def add_interview():
+    try:
+        # Get interview data from request JSON
+        interview_data = request.json
+
+        # Define required fields
+        required_fields = ['candidateName', 'interviewName', 'postingTitle', 'from', 'to', 'interviewers']
+        
+        # Validate required fields
+        missing_fields = [field for field in required_fields if field not in interview_data]
+        if missing_fields:
+            return jsonify({'error': f'Missing fields: {", ".join(missing_fields)}'}), 400
+        
+        # Change the format to match the incoming date format
+        interview_data['from'] = datetime.strptime(interview_data['from'], '%m/%d/%Y %I:%M %p')
+        interview_data['to'] = datetime.strptime(interview_data['to'], '%m/%d/%Y %I:%M %p')
+
+
+        # Insert interview data into MongoDB
+        result = app.db2.interviewlist.insert_one(interview_data)
+
+        # Return success response with inserted ID
+        return jsonify({'message': 'Interview added successfully', 'interview_id': str(result.inserted_id)}), 201
+    
+    except Exception as e:
+        # Return error response
+        return jsonify({'error': str(e)}), 500
+    
+@zoho_bp.route('/zoho/getinterviews', methods=['GET'])
+def get_all_interviews():
+    try:
+        # Fetch all records from the interviewlist collection
+        interviews = list(app.db2.interviewlist.find())
+
+        # Convert the MongoDB ObjectId to string for each document
+        for interview in interviews:
+            interview['_id'] = str(interview['_id'])
+
+        # Return the list of interviews as a JSON response
+        return jsonify({'interviews': interviews}), 200
+
+    except Exception as e:
+        # Return error response in case of any issues
+        return jsonify({'error': str(e)}), 500
+
 
 @zoho_bp.route('/jobs/getall', methods=['GET'])
 def get_all_jobs():
