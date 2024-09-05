@@ -67,8 +67,8 @@ def add_zoho_client():
 def get_zoho_job():
     try:
         # Get query parameters
-        posting_title = request.args.get('Posting Title')
-        client_name = request.args.get('Client Name')
+        posting_title = request.args.get('postingTitle')
+        client_name = request.args.get('clientName')
         
         # Ensure at least one query parameter is provided
         if not posting_title and not client_name:
@@ -77,9 +77,9 @@ def get_zoho_job():
         # Build the query
         query = {}
         if posting_title:
-            query['Posting Title'] = posting_title
+            query['postingTitle'] = posting_title
         if client_name:
-            query['Client Name'] = client_name
+            query['clientName'] = client_name
         
         # Query the MongoDB collection
         jobs = list(app.db2.joblist.find(query))
