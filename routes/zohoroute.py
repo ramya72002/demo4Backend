@@ -183,6 +183,7 @@ def update_candidate_stage():
     try:
         # Get data from request JSON
         update_data = request.json
+        print(f"Received update data: {update_data}")  # Debug log
         
         # Check if 'First_Name', 'Last_Name', and 'Candidate_Stage' are provided
         if 'First_Name' not in update_data or 'Last_Name' not in update_data or 'Candidate_Stage' not in update_data:
@@ -193,13 +194,14 @@ def update_candidate_stage():
         first_name = update_data['First_Name']
         last_name = update_data['Last_Name']
         
-        # Update the candidate's stage, first name, and last name in MongoDB
+        # Update the candidate's stage in MongoDB
         result = app.db2.candidatelist.update_many(
             {'First_Name': first_name, 'Last_Name': last_name},  # Filter by first name and last name
             {'$set': {
                 'Candidate_Stage': new_stage
-            }}  # Update the Candidate_Stage, First_Name, and Last_Name
+            }}  # Update the Candidate_Stage
         )
+        print(f"Update result: Matched count: {result.matched_count}, Modified count: {result.modified_count}")  # Debug log
         
         # Check if the update was successful
         if result.matched_count == 0:
@@ -209,7 +211,9 @@ def update_candidate_stage():
     
     except Exception as e:
         # Return error response
+        print(f"Exception occurred: {str(e)}")  # Debug log
         return jsonify({'error': str(e)}), 500
+
 
 @zoho_bp.route('/zoho/postinterview', methods=['POST'])
 def add_interview():
