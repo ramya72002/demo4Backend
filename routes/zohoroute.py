@@ -151,3 +151,19 @@ def get_all_candidates():
     except Exception as e:
         # Return error response in case of failure
         return jsonify({'error': str(e)}), 500
+
+@zoho_bp.route('/clients/getall', methods=['GET'])
+def get_all_clients():
+    try:
+        # Fetch all records from the 'clients' collection and exclude '_id'
+        clients = app.db2.clientlist.find({}, {'_id': False})
+        
+        # Convert the MongoDB cursor into a list
+        clients_list = list(clients)
+        
+        # Return the list of clients as JSON
+        return jsonify(clients_list), 200
+    
+    except Exception as e:
+        # Return error response in case of failure
+        return jsonify({'error': str(e)}), 500
