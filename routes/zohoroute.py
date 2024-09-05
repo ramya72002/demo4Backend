@@ -121,6 +121,37 @@ def get_zoho_job():
         # Return error response
         return jsonify({'error': str(e)}), 500
 
+@zoho_bp.route('/zoho/getcandidate_name', methods=['GET'])
+def get_zoho_candidate_name():
+    try:
+        # Get query parameters
+        first_name = request.args.get('First_Name')
+        last_name = request.args.get('Last_Name')
+        
+        # Ensure at least one query parameter is provided
+        if not first_name and not last_name:
+            return jsonify({'error': 'At least one of First Name or Last Name must be provided'}), 400
+        
+        # Build the query
+        query = {}
+        if last_name:
+            query['Last Name'] = last_name
+        if first_name:
+            query['First Name'] = first_name
+        
+        # Query the MongoDB collection
+        candidates = list(app.db2.candidatelist.find(query))
+        
+        # Convert ObjectId to string for JSON serialization
+        for candidate in candidates:
+            candidate['_id'] = str(candidate['_id'])
+        
+        # Return the candidates in JSON format
+        return jsonify(candidates), 200
+    
+    except Exception as e:
+        # Return error response
+        return jsonify({'error': str(e)}), 500
 
 @zoho_bp.route('/candidate/post', methods=['POST'])
 def post_candidate():
@@ -146,25 +177,28 @@ def post_candidate():
     except Exception as e:
         # Return error response
         return jsonify({'error': str(e)}), 500
-
+    
 @zoho_bp.route('/candidate/update_stage', methods=['POST'])
 def update_candidate_stage():
     try:
         # Get data from request JSON
         update_data = request.json
         
-        # Check if 'candidate_id' and 'Candidate_Stage' are provided
-        if 'candidate_id' not in update_data or 'Candidate_Stage' not in update_data:
-            return jsonify({'error': 'Missing required fields: candidate_id and Candidate_Stage'}), 400
+        # Check if 'First_Name', 'Last_Name', and 'Candidate_Stage' are provided
+        if 'First_Name' not in update_data or 'Last_Name' not in update_data or 'Candidate_Stage' not in update_data:
+            return jsonify({'error': 'Missing required fields: First_Name, Last_Name, or Candidate_Stage'}), 400
         
-        # Define the candidate ID and new stage
-        candidate_id = update_data['candidate_id']
+        # Define the new stage, first name, and last name
         new_stage = update_data['Candidate_Stage']
+        first_name = update_data['First_Name']
+        last_name = update_data['Last_Name']
         
-        # Update the candidate's stage in MongoDB
-        result = app.db2.candidatelist.update_one(
-            {'_id': pymongo.ObjectId(candidate_id)},  # Filter by candidate ID
-            {'$set': {'Candidate_Stage': new_stage}}  # Update the Candidate_Stage
+        # Update the candidate's stage, first name, and last name in MongoDB
+        result = app.db2.candidatelist.update_many(
+            {'First_Name': first_name, 'Last_Name': last_name},  # Filter by first name and last name
+            {'$set': {
+                'Candidate_Stage': new_stage
+            }}  # Update the Candidate_Stage, First_Name, and Last_Name
         )
         
         # Check if the update was successful
