@@ -1,6 +1,7 @@
 # routes/job_routes.py
 
 import datetime
+import io
 from flask import Blueprint, jsonify, request
 from pymongo import MongoClient
 from flask import current_app as app
@@ -8,55 +9,60 @@ from datetime import datetime
 from pyresparser import ResumeParser
 from docx import Document
 import os
+import tempfile
 from PyPDF2 import PdfReader
 
 zoho_bp = Blueprint('zoho_bp', __name__)
+def sanitize_text(text):
+    # Sanitize the text to ensure it does not contain invalid characters
+    return ''.join(c if c.isprintable() else ' ' for c in text)
 
+@zoho_bp.route('/res', methods=['POST'])
+def upload_resume():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part in the request'}), 400
 
-@zoho_bp.route('/res', methods=['GET'])
-def get_all_res():
-    filed = './rr.pdf'  # Path to the resume file
+    file = request.files['file']
 
-    # Check if the file exists before proceeding
-    if not os.path.isfile(filed):
-        return jsonify({'error': f'File not found: {filed}'}), 404
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
 
-    try:
-        # Step 1: Extract text from the PDF file using PyPDF2
-        def convert_pdf_to_text(pdf_path):
-            reader = PdfReader(pdf_path)
-            text = ''
-            for page in reader.pages:
-                text += page.extract_text() or ''
-            return text
-
-        pdf_text = convert_pdf_to_text(filed)
-
-        # Step 2: Save the extracted text into a .docx file
-        doc = Document()
-        doc.add_paragraph(pdf_text)
-        doc.save('text.docx')
-
-        # Step 3: Parse the newly created .docx file using pyresparser
+    if file and file.filename.lower().endswith('.pdf'):
         try:
-            data = ResumeParser('text.docx').get_extracted_data()
-            print(data)
-            skills = data.get('skills', 'No skills found')  # Safely extract skills
-            return jsonify({'skills': skills}), 200
+            # Step 1: Extract text from the PDF file using PyPDF2
+            def convert_pdf_to_text(file_stream):
+                reader = PdfReader(file_stream)
+                text = ''
+                for page in reader.pages:
+                    text += page.extract_text() or ''
+                return text
+
+            pdf_text = sanitize_text(convert_pdf_to_text(file))
+
+            # Step 2: Save the extracted text into a .docx file (in-memory)
+            doc = Document()
+            doc.add_paragraph(pdf_text)
+            
+            # Create a temporary file
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as temp_file:
+                temp_file_name = temp_file.name
+                doc.save(temp_file_name)
+
+            # Step 3: Parse the newly created .docx file using pyresparser
+            try:
+                data = ResumeParser(temp_file_name).get_extracted_data()
+                skills = data.get('skills', 'No skills found')
+                return jsonify({'skills': skills}), 200
+            except Exception as e:
+                return jsonify({'error': 'Error while parsing the .docx file: ' + str(e)}), 500
+            finally:
+                # Clean up the temporary file
+                os.remove(temp_file_name)
+
         except Exception as e:
-            return jsonify({'error': 'Error while parsing the .docx file: ' + str(e)}), 500
+            return jsonify({'error': 'Error while processing the PDF file: ' + str(e)}), 500
 
-    except Exception as e:
-        # If an error occurs while processing the PDF or creating the .docx file
-        try:
-            # Fallback: Parse the original PDF directly
-            data = ResumeParser(filed).get_extracted_data()
-            skills = data.get('skills', 'No skills found')
-            return jsonify({'skills': skills}), 200
-        except Exception as e:
-            return jsonify({'error': 'Error while parsing the PDF file: ' + str(e)}), 500
-
-
+    return jsonify({'error': 'Invalid file format'}), 400
 
 @zoho_bp.route("/zoho")
 def index():
