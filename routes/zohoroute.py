@@ -5,9 +5,58 @@ from flask import Blueprint, jsonify, request
 from pymongo import MongoClient
 from flask import current_app as app
 from datetime import datetime
-
+from pyresparser import ResumeParser
+from docx import Document
+import os
+from PyPDF2 import PdfReader
 
 zoho_bp = Blueprint('zoho_bp', __name__)
+
+
+@zoho_bp.route('/res', methods=['GET'])
+def get_all_res():
+    filed = './rr.pdf'  # Path to the resume file
+
+    # Check if the file exists before proceeding
+    if not os.path.isfile(filed):
+        return jsonify({'error': f'File not found: {filed}'}), 404
+
+    try:
+        # Step 1: Extract text from the PDF file using PyPDF2
+        def convert_pdf_to_text(pdf_path):
+            reader = PdfReader(pdf_path)
+            text = ''
+            for page in reader.pages:
+                text += page.extract_text() or ''
+            return text
+
+        pdf_text = convert_pdf_to_text(filed)
+
+        # Step 2: Save the extracted text into a .docx file
+        doc = Document()
+        doc.add_paragraph(pdf_text)
+        doc.save('text.docx')
+
+        # Step 3: Parse the newly created .docx file using pyresparser
+        try:
+            data = ResumeParser('text.docx').get_extracted_data()
+            print(data)
+            skills = data.get('skills', 'No skills found')  # Safely extract skills
+            return jsonify({'skills': skills}), 200
+        except Exception as e:
+            return jsonify({'error': 'Error while parsing the .docx file: ' + str(e)}), 500
+
+    except Exception as e:
+        # If an error occurs while processing the PDF or creating the .docx file
+        try:
+            # Fallback: Parse the original PDF directly
+            data = ResumeParser(filed).get_extracted_data()
+            skills = data.get('skills', 'No skills found')
+            return jsonify({'skills': skills}), 200
+        except Exception as e:
+            return jsonify({'error': 'Error while parsing the PDF file: ' + str(e)}), 500
+
+
 
 @zoho_bp.route("/zoho")
 def index():
@@ -309,3 +358,4 @@ def get_all_clients():
     except Exception as e:
         # Return error response in case of failure
         return jsonify({'error': str(e)}), 500
+    

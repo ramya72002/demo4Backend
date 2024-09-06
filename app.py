@@ -1,6 +1,6 @@
 # app.py
 
-from flask import Flask
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from pymongo import MongoClient
 from dotenv import load_dotenv
@@ -8,6 +8,7 @@ import os, pathlib
 from routes.auth_routes import auth_bp
 from routes.job_routes import job_bp
 from routes.zohoroute import zoho_bp
+
 
 app = Flask("Google login app")
 app.secret_key="CodeSecret"
@@ -35,5 +36,6 @@ app.register_blueprint(zoho_bp)
 def index():
     return "Hello World <a href='/login'> <button>Login</button></a>"
 
+    
 if __name__ == '__main__':
     app.run()
