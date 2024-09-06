@@ -40,12 +40,12 @@ def callback():
     return redirect("/protected_area")
 
 
-@auth_bp.route("/protected_area")
-def protected_area():
-    return f"Hello {session['name']}! <br/> <a href='/logout'><button>Logout</button></a>"
+# @auth_bp.route("/protected_area")
+# def protected_area():
+#     return f"Hello {session['name']}! <br/> <a href='/logout'><button>Logout</button></a>"
 
 
-@auth_bp.route("/logout")
-def logout():
-    session.clear()
-    return redirect("/")
+# @auth_bp.route("/logout")
+# def logout():
+#     session.clear()
+#     return redirect("/")
