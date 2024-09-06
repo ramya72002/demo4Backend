@@ -10,34 +10,34 @@ import requests
 
 auth_bp = Blueprint('auth_bp', __name__)
 
-@auth_bp.route("/login")
-def login():
-    authorization_url, state = app.flow.authorization_url()
-    session["state"] = state
-    return redirect(authorization_url)
+# @auth_bp.route("/login")
+# def login():
+#     authorization_url, state = app.flow.authorization_url()
+#     session["state"] = state
+#     return redirect(authorization_url)
 
 
-@auth_bp.route("/callback")
-def callback():
-    app.flow.fetch_token(authorization_response=request.url)
+# @auth_bp.route("/callback")
+# def callback():
+#     app.flow.fetch_token(authorization_response=request.url)
 
-    if not session["state"] == request.args["state"]:
-        abort(500)  # State does not match!
+#     if not session["state"] == request.args["state"]:
+#         abort(500)  # State does not match!
 
-    credentials = app.flow.credentials
-    request_session = requests.session()
-    cached_session = cachecontrol.CacheControl(request_session)
-    token_request = google.auth.transport.requests.Request(session=cached_session)
+#     credentials = app.flow.credentials
+#     request_session = requests.session()
+#     cached_session = cachecontrol.CacheControl(request_session)
+#     token_request = google.auth.transport.requests.Request(session=cached_session)
 
-    id_info = id_token.verify_oauth2_token(
-        id_token=credentials._id_token,
-        request=token_request,
-        audience=app.config['GOOGLE_CLIENT_ID']
-    )
+#     id_info = id_token.verify_oauth2_token(
+#         id_token=credentials._id_token,
+#         request=token_request,
+#         audience=app.config['GOOGLE_CLIENT_ID']
+#     )
 
-    session["google_id"] = id_info.get("sub")
-    session["name"] = id_info.get("name")
-    return redirect("/protected_area")
+#     session["google_id"] = id_info.get("sub")
+#     session["name"] = id_info.get("name")
+#     return redirect("/protected_area")
 
 
 # @auth_bp.route("/protected_area")
