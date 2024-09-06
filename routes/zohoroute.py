@@ -7,7 +7,7 @@ from pymongo import MongoClient
 from flask import current_app as app
 from datetime import datetime
 # from pyresparser import ResumeParser
-from docx import Document
+# from docx import Document
 # import os
 # import tempfile
 # from PyPDF2 import PdfReader
