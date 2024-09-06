@@ -1,0 +1,8 @@
+# Exclude tests and documentation
+tests/
+docs/
+*.md
+
+# Exclude large files or directories
+large-files/
+*.zip
