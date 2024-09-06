@@ -11,8 +11,7 @@
         "src": "/(.*)",
         "dest": "app.py"
       }
-    ],
-    "ignore": ["**/tests/**", "**/*.md", "node_modules", ".git"]
+    ]
   }
 
   
