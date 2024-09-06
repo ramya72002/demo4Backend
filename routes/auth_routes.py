@@ -1,12 +1,6 @@
 # routes/auth_routes.py
 
-from flask import Blueprint, session, redirect, abort, request
-from flask import current_app as app
-from google.oauth2 import id_token
-from google_auth_oauthlib.flow import Flow
-from pip._vendor import cachecontrol
-import google.auth.transport.requests
-import requests
+from flask import Blueprint
 
 auth_bp = Blueprint('auth_bp', __name__)
 
