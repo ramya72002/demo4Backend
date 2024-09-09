@@ -13,6 +13,15 @@ from datetime import datetime
 # from PyPDF2 import PdfReader
 
 zoho_bp = Blueprint('zoho_bp', __name__)
+JOB_STAGE_MAPPING = {
+    '1': 'screening',
+    '2': 'submissions',
+    '3': 'interview',
+    '4': 'offered',
+    '5': 'hired',
+    '6': 'rejected',
+    '7': 'archived'
+}
 # def sanitize_text(text):
 #     # Sanitize the text to ensure it does not contain invalid characters
 #     return ''.join(c if c.isprintable() else ' ' for c in text)
@@ -398,4 +407,80 @@ def get_all_details():
     except Exception as e:
         # Return error response in case of failure
         return jsonify({'error': str(e)}), 500
- 
+    
+
+@zoho_bp.route('/update-job-stage', methods=['PUT'])
+def update_job_stage():
+    try:
+        # Get the JSON data from the request
+        data_list = request.json
+
+        if not isinstance(data_list, list):
+            return jsonify({'error': 'Request data must be a list'}), 400
+
+        # Process each item in the list
+        update_results = []
+        for data in data_list:
+            # Extract the details from the JSON request
+            first_name = data.get('First Name')
+            last_name = data.get('Last Name')
+            email = data.get('Email')
+            new_job_stage = data.get('job_stage')
+
+            # Check for required fields
+            if not all([first_name, last_name, email, new_job_stage]):
+                update_results.append({
+                    'status': 'error',
+                    'details': 'Missing required fields',
+                    'record': data
+                })
+                continue
+
+            # Ensure job_stage is an integer
+            if not isinstance(new_job_stage, int):
+                update_results.append({
+                    'status': 'error',
+                    'details': 'job_stage must be an integer',
+                    'record': data
+                })
+                continue
+
+            # Convert job_stage to string for dictionary key lookup
+            job_stage_key = str(new_job_stage)
+            if job_stage_key not in JOB_STAGE_MAPPING:
+                update_results.append({
+                    'status': 'error',
+                    'details': 'Invalid job_stage value',
+                    'record': data
+                })
+                continue
+
+            # Find and update the record
+            result = app.db2.candidatelist.update_one(
+                {
+                    'First Name': first_name,
+                    'Last Name': last_name,
+                    'Email': email
+                },
+                {
+                    '$set': {'job_stage': new_job_stage}
+                }
+            )
+            
+            # Check if any document was modified
+            if result.modified_count == 0:
+                update_results.append({
+                    'status': 'error',
+                    'details': 'No record found or job_stage already up-to-date',
+                    'record': data
+                })
+            else:
+                update_results.append({
+                    'status': 'success',
+                    'record': data
+                })
+
+        return jsonify({'results': update_results}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
