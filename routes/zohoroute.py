@@ -224,6 +224,8 @@ def post_candidate():
         
         candidate_data['Candidate_Stage'] = "new"
         candidate_data['Add_Job'] = "null"
+        candidate_data['job_stage'] = 1
+
         # Insert candidate data into MongoDB
         result = app.db2.candidatelist.insert_one(candidate_data)
         
@@ -337,21 +339,6 @@ def get_all_jobs():
         # Return error response in case of failure
         return jsonify({'error': str(e)}), 500
     
-@zoho_bp.route('/candidate/getall', methods=['GET'])
-def get_all_candidates():
-    try:
-        # Fetch all records from the 'candidates' collection and exclude '_id'
-        candidates = app.db2.candidatelist.find({}, {'_id': False})
-        
-        # Convert the MongoDB cursor into a list
-        candidates_list = list(candidates)
-        
-        # Return the list of candidates as JSON
-        return jsonify(candidates_list), 200
-    
-    except Exception as e:
-        # Return error response in case of failure
-        return jsonify({'error': str(e)}), 500
 
 @zoho_bp.route('/clients/getall', methods=['GET'])
 def get_all_clients():
@@ -369,3 +356,46 @@ def get_all_clients():
         # Return error response in case of failure
         return jsonify({'error': str(e)}), 500
     
+@zoho_bp.route('/candidate/getall', methods=['GET'])
+def get_all_candidates():
+    try:
+        # Fetch all records from the 'candidates' collection and exclude '_id'
+        candidates = app.db2.candidatelist.find({}, {'_id': False})
+        
+        # Convert the MongoDB cursor into a list
+        candidates_list = list(candidates)
+        
+        # Return the list of candidates as JSON
+        return jsonify(candidates_list), 200
+    
+    except Exception as e:
+        # Return error response in case of failure
+        return jsonify({'error': str(e)}), 500
+    
+
+@zoho_bp.route('/hiringpipeline/details', methods=['GET'])
+def get_all_details():
+    try:
+        # Fetch all records where Add_Job is not null
+        candidates = app.db2.candidatelist.find({"Add_Job": {"$ne": None}}, {'_id': False})
+        
+        # Convert the MongoDB cursor into a list
+        candidates_list = list(candidates)
+        
+        # Create a dictionary where Add_Job is the key and a list of records is the value
+        candidates_dict = {}
+        for candidate in candidates_list:
+            add_job = candidate.get('Add_Job')
+            if add_job:
+                if add_job in candidates_dict:
+                    candidates_dict[add_job].append(candidate)
+                else:
+                    candidates_dict[add_job] = [candidate]
+        
+        # Return the dictionary as JSON
+        return jsonify(candidates_dict), 200
+    
+    except Exception as e:
+        # Return error response in case of failure
+        return jsonify({'error': str(e)}), 500
+ 
