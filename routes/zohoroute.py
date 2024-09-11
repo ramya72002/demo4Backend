@@ -80,6 +80,26 @@ def update_job(jobId):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+
+@zoho_bp.route('/job/update_job_opening_status/<jobId>', methods=['PUT'])
+def update_jobOpeningStatus_stage(jobId):
+    try:
+        jobOpeningStatus = request.json.get('jobOpeningStatus')
+        if not jobOpeningStatus:
+            return jsonify({'error': 'jobOpeningStatus must be provided'}), 400
+        
+        result = app.db2.joblist.update_one({'jobId': jobId}, {'$set': {'jobOpeningStatus': jobOpeningStatus}})
+        
+        if result.matched_count == 0:
+            return jsonify({'message': 'Candidate not found'}), 404
+        
+        return jsonify({'message': 'Candidate stage updated successfully'}), 200
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @zoho_bp.route('/zoho/getclient_id', methods=['GET'])
 def get_zoho_client_name():
     try:
