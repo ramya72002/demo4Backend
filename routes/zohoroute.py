@@ -1,5 +1,6 @@
 # routes/job_routes.py
-
+import secrets
+from pymongo.errors import DuplicateKeyError
 import datetime
 # import io
 from flask import Blueprint, jsonify, request
@@ -8,7 +9,7 @@ from flask import current_app as app
 from datetime import datetime
 # from pyresparser import ResumeParser
 # from docx import Document
-# import os
+import uuid
 # import tempfile
 # from PyPDF2 import PdfReader
 
@@ -72,37 +73,115 @@ JOB_STAGE_MAPPING = {
 #             return jsonify({'error': 'Error while processing the PDF file: ' + str(e)}), 500
 
 #     return jsonify({'error': 'Invalid file format'}), 400
+def generate_unique_candidate_id():
+    """Generate a unique 6-digit candidate ID."""
+    while True:
+        # Generate a 6-digit random number
+        candidate_id = str(secrets.randbelow(900000) + 100000)  # Ensures a 6-digit number
+        
+        # Check if the ID already exists in the database
+        if not app.db2.candidatelist.find_one({'candidateId': candidate_id}):
+
+            return candidate_id
 
 @zoho_bp.route("/zoho")
 def index():
     return "Hello zoho member</a>"
 
+def generate_unique_jobId():
+    """Generate a unique 6-digit job ID."""
+    while True:
+        # Generate a 6-digit random number
+        jobId = str(secrets.randbelow(900000) + 100000)  # Ensures a 6-digit number
+        
+        # Check if the ID already exists in the database
+        if not app.db2.joblist.find_one({'jobId': jobId}):
+            return jobId
+
+
+
 @zoho_bp.route('/zoho/postjob', methods=['POST'])
-def add_zoho_job():
+def add_zoho_jobt():
     try:
         # Get job data from request JSON
         job_data = request.json
         
         # Define required fields
-        required_fields = ['postingTitle', 'clientName', 'targetDate', 'industry']
+        required_fields = ['postingTitle','clientName','targetDate','industry','numberOfPositions']
         
         # Validate required fields
         missing_fields = [field for field in required_fields if field not in job_data]
         if missing_fields:
             return jsonify({'error': f'Missing fields: {", ".join(missing_fields)}'}), 400
-
-        # Convert Target Date to datetime
-        job_data['targetDate'] = datetime.strptime(job_data['targetDate'], '%Y-%m-%d')        
-        # Insert job data into MongoDB
+        
+        # Generate a unique clientId
+        job_data['jobId'] = generate_unique_jobId()
+        
+        # Insert the client data into the database
         result = app.db2.joblist.insert_one(job_data)
         
         # Return success response with inserted ID
-        return jsonify({'message': 'Job added successfully', 'job_id': str(result.inserted_id)}), 201
+        return jsonify({'message': 'jobs added successfully', 'job_id': job_data['jobId']}), 201
     
     except Exception as e:
         # Return error response
         return jsonify({'error': str(e)}), 500
+
+@zoho_bp.route('/job/update/<jobId>', methods=['PUT'])
+def update_jobid(jobId):
+    try:
+        # Get the data to update from the request JSON
+        update_data = request.json
+
+        if not update_data:
+            return jsonify({'error': 'updateData must be provided'}), 400
+
+        # Build the query filter
+        query = {'jobId': jobId}
+        
+        # Update the candidate data in MongoDB
+        result = app.db2.joblist.update_one(query, {'$set': update_data})
+
+        if result.matched_count == 0:
+            return jsonify({'message': 'job not found'}), 404
+        
+        # Return success response
+        return jsonify({'message': 'job updated successfully'}), 200
     
+    except Exception as e:
+        # Return error response
+        return jsonify({'error': str(e)}), 500
+
+
+@zoho_bp.route('/zoho/getclient_id', methods=['GET'])
+def get_zoho_client_name():
+    try:
+        # Get query parameters
+        clientId = request.args.get('clientId')
+        
+        if not clientId :
+            return jsonify({'error': 'name must be provided'}), 400
+        
+        # Build the query
+        query = {}
+        if clientId:
+            query['clientId'] = clientId
+        
+        # Query the MongoDB collection
+        clients = list(app.db2.clientlist.find(query))
+        
+        # Convert ObjectId to string for JSON serialization
+        for candidate in clients:
+            candidate['_id'] = str(candidate['_id'])
+        
+        # Return the candidates in JSON format
+        return jsonify(clients), 200
+    
+    except Exception as e:
+        # Return error response
+        return jsonify({'error': str(e)}), 500
+
+
 @zoho_bp.route('/zoho/postclient', methods=['POST'])
 def add_zoho_client():
     try:
@@ -116,16 +195,21 @@ def add_zoho_client():
         missing_fields = [field for field in required_fields if field not in job_data]
         if missing_fields:
             return jsonify({'error': f'Missing fields: {", ".join(missing_fields)}'}), 400
- 
+        
+        # Generate a unique clientId
+        job_data['clientId'] = generate_unique_client_id()
+        
+        # Insert the client data into the database
         result = app.db2.clientlist.insert_one(job_data)
         
         # Return success response with inserted ID
-        return jsonify({'message': 'client added successfully', 'client_id': str(result.inserted_id)}), 201
+        return jsonify({'message': 'Client added successfully', 'client_id': job_data['clientId']}), 201
     
     except Exception as e:
         # Return error response
         return jsonify({'error': str(e)}), 500
-    
+
+
 @zoho_bp.route('/zoho/updatejobstatus', methods=['POST'])
 def update_job_status():
     try:
@@ -153,23 +237,20 @@ def update_job_status():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
-@zoho_bp.route('/zoho/getjob', methods=['GET'])
-def get_zoho_job():
+
+@zoho_bp.route('/zoho/getjob_id', methods=['GET'])
+def get_zoho_job_name():
     try:
         # Get query parameters
-        posting_title = request.args.get('postingTitle')
-        client_name = request.args.get('clientName')
+        jobId = request.args.get('jobId')
         
-        # Ensure at least one query parameter is provided
-        if not posting_title and not client_name:
-            return jsonify({'error': 'At least one of Posting Title or Client Name must be provided'}), 400
+        if not jobId :
+            return jsonify({'error': 'name must be provided'}), 400
         
         # Build the query
         query = {}
-        if posting_title:
-            query['postingTitle'] = posting_title
-        if client_name:
-            query['clientName'] = client_name
+        if jobId:
+            query['jobId'] = jobId
         
         # Query the MongoDB collection
         jobs = list(app.db2.joblist.find(query))
@@ -178,27 +259,56 @@ def get_zoho_job():
         for job in jobs:
             job['_id'] = str(job['_id'])
         
-        # Return the jobs in JSON format
+        # Return the candidates in JSON format
         return jsonify(jobs), 200
     
     except Exception as e:
         # Return error response
         return jsonify({'error': str(e)}), 500
 
-@zoho_bp.route('/zoho/getcandidate_name', methods=['GET'])
+
+@zoho_bp.route('/job/update/<jobId>', methods=['PUT'])
+def update_jobsid(jobId):
+    try:
+        # Get the data to update from the request JSON
+        update_data = request.json
+
+        if not update_data:
+            return jsonify({'error': 'updateData must be provided'}), 400
+
+        # Build the query filter
+        query = {'jobId': jobId}
+        
+        # Update the candidate data in MongoDB
+        result = app.db2.joblist.update_one(query, {'$set': update_data})
+
+        if result.matched_count == 0:
+            return jsonify({'message': 'job not found'}), 404
+        
+        # Return success response
+        return jsonify({'message': 'job updated successfully'}), 200
+    
+    except Exception as e:
+        # Return error response
+        return jsonify({'error': str(e)}), 500
+
+
+
+
+
+@zoho_bp.route('/zoho/getcandidate_id', methods=['GET'])
 def get_zoho_candidate_name():
     try:
         # Get query parameters
-        name = request.args.get('name')
+        candidateId = request.args.get('candidateId')
         
-        # Ensure at least one query parameter is provided
-        if not name :
+        if not candidateId :
             return jsonify({'error': 'name must be provided'}), 400
         
         # Build the query
         query = {}
-        if name:
-            query['name'] = name
+        if candidateId:
+            query['candidateId'] = candidateId
         
         # Query the MongoDB collection
         candidates = list(app.db2.candidatelist.find(query))
@@ -219,58 +329,78 @@ def post_candidate():
     try:
         # Get candidate data from request JSON
         candidate_data = request.json
+
+        # Generate a unique 6-digit candidateId
+        candidate_id = generate_unique_candidate_id()
+
+        # Add candidateId to candidate data
+        candidate_data['candidateId'] = candidate_id
         
-     
-        candidate_data['Candidate_Stage'] = "new"
-        candidate_data['Add_Job'] = "null"
-        candidate_data['job_stage'] = 1
+        # Set other default values
+        candidate_data['candidateStage'] = "new"
+        candidate_data['addJob'] = None
+        candidate_data['jobStage'] = 1
 
         # Insert candidate data into MongoDB
         result = app.db2.candidatelist.insert_one(candidate_data)
         
-        # Return success response with inserted ID
-        return jsonify({'message': 'Candidate added successfully', 'candidate_id': str(result.inserted_id)}), 201
+        # Return success response with inserted ID and candidateId
+        return jsonify({'message': 'Candidate added successfully', 'candidate_id': candidate_id, 'db_id': str(result.inserted_id)}), 201
     
     except Exception as e:
         # Return error response
         return jsonify({'error': str(e)}), 500
-    
-@zoho_bp.route('/candidate/update_stage', methods=['POST'])
-def update_candidate_stage():
-    try:
-        # Get data from request JSON
-        update_data = request.json
-        print(f"Received update data: {update_data}")  # Debug log
-        
-        # Check if 'First_Name', 'Last_Name', and 'Candidate_Stage' are provided
-        if 'name' not in update_data or 'candidate_stage' not in update_data:
-            return jsonify({'error': 'Missing required fields: name or candidate_stage'}), 400
-        
-        # Define the new stage, first name, and last name
-        new_stage = update_data['candidate_stage']
-        name = update_data['name']
-        Add_Job = update_data['add_job']
 
+@zoho_bp.route('/candidate/update/<candidateId>', methods=['PUT'])
+def update_candidate(candidateId):
+    try:
+        # Get the data to update from the request JSON
+        update_data = request.json
+
+        if not update_data:
+            return jsonify({'error': 'updateData must be provided'}), 400
+
+        # Build the query filter
+        query = {'candidateId': candidateId}
         
-        # Update the candidate's stage in MongoDB
-        result = app.db2.candidatelist.update_many(
-            {'name': name},  # Filter by first name and last name
-            {'$set': {
-                'Candidate_Stage': new_stage,
-                'Add_Job': Add_Job
-            }}  # Update the Candidate_Stage
-        )
-        print(f"Update result: Matched count: {result.matched_count}, Modified count: {result.modified_count}")  # Debug log
-        
-        # Check if the update was successful
+        # Update the candidate data in MongoDB
+        result = app.db2.candidatelist.update_one(query, {'$set': update_data})
+
         if result.matched_count == 0:
-            return jsonify({'error': 'Candidate not found'}), 404
+            return jsonify({'message': 'Candidate not found'}), 404
         
+        # Return success response
+        return jsonify({'message': 'Candidate updated successfully'}), 200
+    
+    except Exception as e:
+        # Return error response
+        return jsonify({'error': str(e)}), 500
+
+
+
+@zoho_bp.route('/candidate/update_stage/<candidateId>', methods=['PUT'])
+def update_candidate_stage(candidateId):
+    try:
+        # Get the candidateStage from the request JSON
+        update_data = request.json.get('candidateStage')
+
+        if not update_data:
+            return jsonify({'error': 'candidateStage must be provided'}), 400
+
+        # Build the query filter
+        query = {'candidateId': candidateId}
+        
+        # Update the candidateStage in MongoDB
+        result = app.db2.candidatelist.update_one(query, {'$set': {'candidateStage': update_data}})
+
+        if result.matched_count == 0:
+            return jsonify({'message': 'Candidate not found'}), 404
+        
+        # Return success response
         return jsonify({'message': 'Candidate stage updated successfully'}), 200
     
     except Exception as e:
         # Return error response
-        print(f"Exception occurred: {str(e)}")  # Debug log
         return jsonify({'error': str(e)}), 500
 
 
@@ -353,7 +483,34 @@ def get_all_clients():
     except Exception as e:
         # Return error response in case of failure
         return jsonify({'error': str(e)}), 500
+
+
+@zoho_bp.route('/client/update/<clientId>', methods=['PUT'])
+def update_client(clientId):
+    try:
+        # Get the data to update from the request JSON
+        update_data = request.json
+
+        if not update_data:
+            return jsonify({'error': 'updateData must be provided'}), 400
+
+        # Build the query filter
+        query = {'clientId': clientId}
+        
+        # Update the client data in MongoDB
+        result = app.db2.clientlist.update_one(query, {'$set': update_data})
+
+        if result.matched_count == 0:
+            return jsonify({'message': 'client not found'}), 404
+        
+        # Return success response
+        return jsonify({'message': 'client  updated successfully'}), 200
     
+    except Exception as e:
+        # Return error response
+        return jsonify({'error': str(e)}), 500
+
+
 @zoho_bp.route('/candidate/getall', methods=['GET'])
 def get_all_candidates():
     try:
