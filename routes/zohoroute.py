@@ -33,6 +33,13 @@ def generate_unique_jobId():
         if not app.db2.joblist.find_one({'jobId': jobId}):
             return jobId
 
+def generate_unique_client_id():
+    """Generate a unique 6-digit client ID."""
+    while True:
+        clientId = str(secrets.randbelow(900000) + 100000)  # Ensures a 6-digit number
+        if not app.db2.clientlist.find_one({'clientId': clientId}):
+            return clientId
+
 # Routes
 @zoho_bp.route("/zoho")
 def index():
@@ -99,7 +106,7 @@ def add_zoho_client():
         if missing_fields:
             return jsonify({'error': f'Missing fields: {", ".join(missing_fields)}'}), 400
         
-        client_data['clientId'] = generate_unique_candidate_id()
+        client_data['clientId'] = generate_unique_client_id()
         app.db2.clientlist.insert_one(client_data)
         
         return jsonify({'message': 'Client added successfully', 'client_id': client_data['clientId']}), 201
