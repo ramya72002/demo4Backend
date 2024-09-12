@@ -49,7 +49,7 @@ def index():
 def add_zoho_job():
     try:
         job_data = request.json
-        required_fields = ['postingTitle', 'clientName', 'targetDate', 'industry', 'numberOfPositions']
+        required_fields = ['jobOpening', 'clientName', 'targetDate', 'industry', 'numberOfPositions']
         missing_fields = [field for field in required_fields if field not in job_data]
         
         if missing_fields:
@@ -138,14 +138,14 @@ def add_zoho_client():
 def update_job_status():
     try:
         client_name = request.json.get('clientName')
-        posting_title = request.json.get('postingTitle')
+        posting_title = request.json.get('jobOpening')
         new_status = request.json.get('newStatus')
         
         if not client_name or not posting_title or not new_status:
-            return jsonify({'error': 'clientName, postingTitle, and newStatus are required'}), 400
+            return jsonify({'error': 'clientName, jobOpening, and newStatus are required'}), 400
         
         result = app.db2.joblist.update_one(
-            {'clientName': client_name, 'postingTitle': posting_title},
+            {'clientName': client_name, 'jobOpening': posting_title},
             {'$set': {'Job Opening Status': new_status}}
         )
         
