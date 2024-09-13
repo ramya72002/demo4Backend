@@ -1,6 +1,7 @@
 # routes/job_routes.py
 
 import secrets
+from collections import Counter
 from flask import Blueprint, jsonify, request
 from flask import current_app as app
 from datetime import datetime
@@ -8,15 +9,7 @@ from datetime import datetime
 zoho_bp = Blueprint('zoho_bp', __name__)
 
 # Constants
-JOB_STAGE_MAPPING = {
-    '1': 'screening',
-    '2': 'submissions',
-    '3': 'interview',
-    '4': 'offered',
-    '5': 'hired',
-    '6': 'rejected',
-    '7': 'archived'
-}
+
 
 # Helper Functions
 def generate_unique_candidate_id():
@@ -108,9 +101,7 @@ def get_zoho_client_name():
             return jsonify({'error': 'Client ID must be provided'}), 400
         
         clients = list(app.db2.clientlist.find({'clientId': clientId}, {'_id': False}))
-        for client in clients:
-            client['_id'] = str(client['_id'])
-        
+            
         return jsonify(clients), 200
     
     except Exception as e:
@@ -164,9 +155,8 @@ def get_zoho_job_name():
         if not jobId:
             return jsonify({'error': 'Job ID must be provided'}), 400
         
-        jobs = list(app.db2.joblist.find({'jobId': jobId}))
-        for job in jobs:
-            job['_id'] = str(job['_id'])
+        jobs = list(app.db2.joblist.find({'jobId': jobId},{'_id': False}))
+      
         
         return jsonify(jobs), 200
     
@@ -176,15 +166,43 @@ def get_zoho_job_name():
 @zoho_bp.route('/zoho/getinterviews', methods=['GET'])
 def get_all_interviews():
     try:
-        interviews = list(app.db2.interviewlist.find())
-        for interview in interviews:
-            interview['_id'] = str(interview['_id'])
+        interviews = list(app.db2.interviewlist.find({},{'_id': False}))
+
         
         return jsonify({'interviews': interviews}), 200
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+JOB_STAGE_MAPPING = {
+    '1': 'new', 
+    '2': 'inreview', 
+    '3': 'available', 
+    '4': 'engaged', 
+    '5': 'offered', 
+    '6': 'hired',
+    '7': 'rejected'
+}
 
+@zoho_bp.route('/jobs/getstagecounts', methods=['GET'])
+def get_stage_counts():
+    try:
+        # Fetch the candidate data from the database
+        candidates = app.db2.joblist.find({}, {'_id': False, 'candidateStage': True})
+        stage_counts = Counter()
+
+        # Count the occurrences of each candidate stage
+        for candidate in candidates:
+            stage = candidate.get('candidateStage')
+            if stage in JOB_STAGE_MAPPING.values():
+                stage_counts[stage] += 1
+
+        # Prepare the response in the required format
+        result = {stage: stage_counts[stage] for stage in JOB_STAGE_MAPPING.values()}
+        
+        return jsonify(result), 200
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 @zoho_bp.route('/jobs/getall', methods=['GET'])
 def get_all_jobs():
     try:
