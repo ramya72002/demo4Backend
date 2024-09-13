@@ -107,7 +107,7 @@ def get_zoho_client_name():
         if not clientId:
             return jsonify({'error': 'Client ID must be provided'}), 400
         
-        clients = list(app.db2.clientlist.find({'clientId': clientId}))
+        clients = list(app.db2.clientlist.find({'clientId': clientId}, {'_id': False}))
         for client in clients:
             client['_id'] = str(client['_id'])
         
