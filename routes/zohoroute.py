@@ -183,24 +183,37 @@ JOB_STAGE_MAPPING = {
     '7': 'rejected'
 }
 
-@zoho_bp.route('/jobs/getstagecounts', methods=['GET'])
-def get_stage_counts():
+@zoho_bp.route('/zoho/getclient_jobs', methods=['GET'])
+def get_client_jobs():
     try:
-        # Fetch the candidate data from the database
-        candidates = app.db2.joblist.find({}, {'_id': False, 'candidateStage': True})
-        stage_counts = Counter()
+        # Fetch all documents from the database
+        candidates = list(app.db2.candidatelist.find({}, {'_id': False, 'name': True,'candidateId':True, 'clientName': True, 'jobOpening': True, 'candidateStage': True}))
 
-        # Count the occurrences of each candidate stage
+        # Dictionary to hold the result
+        result = {}
+
         for candidate in candidates:
-            stage = candidate.get('candidateStage')
-            if stage in JOB_STAGE_MAPPING.values():
-                stage_counts[stage] += 1
+            client_name = candidate.get('clientName', 'Unknown Client')
+            job_opening = candidate.get('jobOpening', 'Unknown Job')
+            candidate_info = {
+                'candidateId':candidate.get('candidateId'),
+                'candidateName': candidate.get('name'),
+                'candidateStage': candidate.get('candidateStage')
+            }
+            
+            # If the client name doesn't exist in result, add it
+            if client_name not in result:
+                result[client_name] = {}
 
-        # Prepare the response in the required format
-        result = {stage: stage_counts[stage] for stage in JOB_STAGE_MAPPING.values()}
-        
+            # Add the job opening as a nested key under client name
+            if job_opening not in result[client_name]:
+                result[client_name][job_opening] = []
+            
+            # Append the candidate information to the respective job opening
+            result[client_name][job_opening].append(candidate_info)
+
         return jsonify(result), 200
-    
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 @zoho_bp.route('/jobs/getall', methods=['GET'])
