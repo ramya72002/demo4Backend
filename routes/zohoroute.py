@@ -289,16 +289,24 @@ def update_candidate(candidateId):
         update_data = request.json
         if not update_data:
             return jsonify({'error': 'Update data must be provided'}), 400
-        
-        result = app.db2.candidatelist.update_one({'candidateId': candidateId}, {'$set': update_data})
-        
+
+        # Remove _id from the update data if it exists to prevent updating _id
+        update_data.pop('_id', None)
+
+        # Perform the update operation
+        result = app.db2.candidatelist.update_one(
+            {'candidateId': candidateId}, 
+            {'$set': update_data}
+        )
+
         if result.matched_count == 0:
             return jsonify({'message': 'Candidate not found'}), 404
-        
+
         return jsonify({'message': 'Candidate updated successfully'}), 200
-    
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 @zoho_bp.route('/candidate/update_stage/<candidateId>', methods=['PUT'])
 def update_candidate_stage(candidateId):
